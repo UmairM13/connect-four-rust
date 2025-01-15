@@ -16,11 +16,7 @@ fn display_board(board: &[char; 42]) {
 }
 
 fn valid_move(board: &mut [char; 42], column: usize) -> bool {
-    if board[column] != '.' {
-        false
-    } else {
-        true
-    }
+    board[column] == '.'
 }
 
 fn drop_piece(board: &mut [char; 42], column: usize, player: char) {
@@ -33,28 +29,13 @@ fn drop_piece(board: &mut [char; 42], column: usize, player: char) {
     }
 }
 
-fn get_player_input(_board: &[char; 42]) -> Option<usize> {
-    loop {
-        println!("Enter a column (1-7) or 0 to exit: ");
-        let mut input = String::new();
-        std::io::stdin()
-            .read_line(&mut input)
-            .expect("Failed to read line");
-
-        match input.trim().parse::<usize>() {
-            Ok(0) => return None,
-            Ok(column) if column >= 1 && column <= 7 => {
-                return Some(column - 1);
-            }
-            _ => println!("Please enter a valid column (1-7) or 0 to exit"),
-        }
-    }
-}
-
-fn take_turn(board: &mut [char; 42], player: char) -> bool {
+fn take_turn<F>(board: &mut [char; 42], player: char, input_fn: F) -> bool
+where
+    F: Fn(&[char; 42]) -> Option<usize>,
+{
     loop {
         display_board(board);
-        let column = match get_player_input(board) {
+        let column = match input_fn(board) {
             Some(column) => column,
             None => {
                 println!("Exiting game");
@@ -146,71 +127,25 @@ fn ai_move(board: &mut [char; 42]) -> bool {
     }
 }
 
-fn game_loop_ai() {
-    let mut board = ['.'; 42];
+fn get_player_input(_board: &[char; 42]) -> Option<usize> {
     loop {
-        if !take_turn(&mut board, 'R') {
-            break;
-        }
-        if check_win(&board, 'R') {
-            display_board(&board);
-            println!("Red wins!");
-            break;
-        }
-        if is_full(&board) {
-            display_board(&board);
-            println!("It's a tie!");
-            break;
-        }
+        println!("Enter a column (1-7) or 0 to exit: ");
+        let mut input = String::new();
+        std::io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
 
-        ai_move(&mut board);
-        if check_win(&board, 'B') {
-            display_board(&board);
-            println!("Blue wins!");
-            break;
-        }
-        if is_full(&board) {
-            display_board(&board);
-            println!("It's a tie!");
-            break;
+        match input.trim().parse::<usize>() {
+            Ok(0) => return None,
+            Ok(column) if column >= 1 && column <= 7 => {
+                return Some(column - 1);
+            }
+            _ => println!("Please enter a valid column (1-7) or 0 to exit"),
         }
     }
 }
 
-fn game_loop() {
-    let mut board = ['.'; 42];
-    loop {
-        if !take_turn(&mut board, 'R') {
-            break;
-        }
-        if check_win(&board, 'R') {
-            display_board(&board);
-            println!("Red wins!");
-            break;
-        }
-        if is_full(&board) {
-            display_board(&board);
-            println!("It's a tie!");
-            break;
-        }
-
-        if !take_turn(&mut board, 'B') {
-            break;
-        }
-        if check_win(&board, 'B') {
-            display_board(&board);
-            println!("Blue wins!");
-            break;
-        }
-        if is_full(&board) {
-            display_board(&board);
-            println!("It's a tie!");
-            break;
-        }
-    }
-}
-
-fn get_player_input_timeout() -> Option<usize> {
+fn get_player_input_timeout(_board: &[char; 42]) -> Option<usize> {
     println!("You have 5 seconds to enter a column (1-7) or 0 to exit: ");
     let timeout = Duration::from_secs(5);
 
@@ -235,13 +170,49 @@ fn get_player_input_timeout() -> Option<usize> {
     }
 }
 
-fn game_loop_ai_timeout() {
+fn game_loop<F>(input_fn: F)
+where
+    F: Fn(&[char; 42]) -> Option<usize>,
+{
+    let mut board = ['.'; 42];
+    loop {
+        if !take_turn(&mut board, 'R', &input_fn) {
+            break;
+        }
+        if check_win(&board, 'R') {
+            display_board(&board);
+            println!("Red wins!");
+            break;
+        }
+        if is_full(&board) {
+            display_board(&board);
+            println!("It's a tie!");
+            break;
+        }
+
+        if !take_turn(&mut board, 'B', &input_fn) {
+            break;
+        }
+        if check_win(&board, 'B') {
+            display_board(&board);
+            println!("Blue wins!");
+            break;
+        }
+        if is_full(&board) {
+            display_board(&board);
+            println!("It's a tie!");
+            break;
+        }
+    }
+}
+
+fn game_loop_ai(input_fn: fn(&[char; 42]) -> Option<usize>) {
     let mut board = ['.'; 42];
     for player in ["R", "B"].iter().cycle().take(43) {
         display_board(&board);
 
         if *player == "R" {
-            match get_player_input_timeout() {
+            match input_fn(&board) {
                 Some(column) if valid_move(&mut board, column) => {
                     drop_piece(&mut board, column, 'R')
                 }
@@ -281,10 +252,9 @@ fn main() {
 
     match choice.trim().parse::<u32>() {
         Ok(0) => println!("Game exited. Thanks for playing!"),
-        Ok(1) => game_loop(),
-        Ok(2) => game_loop_ai(),
-        Ok(3) => game_loop_ai_timeout(),
-
+        Ok(1) => game_loop(get_player_input),
+        Ok(2) => game_loop_ai(get_player_input),
+        Ok(3) => game_loop(get_player_input_timeout),
         _ => println!("Invalid choice"),
     }
 }
