@@ -1,4 +1,6 @@
+use crossterm::event::{self, Event, KeyCode};
 use rand::Rng;
+use std::time::Duration;
 
 // const BOARD: &[char; 42] = &['.'; 42];
 // The reason why we don't do the above is because we can't index into a slice with a usize
@@ -208,10 +210,68 @@ fn game_loop() {
     }
 }
 
+fn get_player_input_timeout() -> Option<usize> {
+    println!("You have 5 seconds to enter a column (1-7) or 0 to exit: ");
+    let timeout = Duration::from_secs(5);
+
+    if event::poll(timeout).unwrap() {
+        if let Event::Key(key_event) = event::read().unwrap() {
+            match key_event.code {
+                KeyCode::Char('0') => None, // Exit the game
+                KeyCode::Char(c) if c >= '1' && c <= '7' => {
+                    Some(c.to_digit(10).unwrap() as usize - 1)
+                }
+                _ => {
+                    println!("Invalid input.");
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    } else {
+        println!("Time's up!");
+        None
+    }
+}
+
+fn game_loop_ai_timeout() {
+    let mut board = ['.'; 42];
+    for player in ["R", "B"].iter().cycle().take(43) {
+        display_board(&board);
+
+        if *player == "R" {
+            match get_player_input_timeout() {
+                Some(column) if valid_move(&mut board, column) => {
+                    drop_piece(&mut board, column, 'R')
+                }
+                Some(_) | None => {
+                    println!("Exiting game.");
+                    break;
+                }
+            }
+        } else {
+            ai_move(&mut board);
+        }
+
+        display_board(&board);
+
+        if check_win(&board, player.chars().next().unwrap()) {
+            println!("Player {} wins!", player);
+            break;
+        }
+        if is_full(&board) {
+            println!("It's a tie!");
+            break;
+        }
+    }
+}
+
 fn main() {
     println!("Connect 4!");
     println!("1. Play against another player");
     println!("2. Play against AI");
+    println!("3. Play against a harder AI with timed player moves");
     println!("Please select an option (0 to exit): ");
 
     let mut choice = String::new();
@@ -223,6 +283,7 @@ fn main() {
         Ok(0) => println!("Game exited. Thanks for playing!"),
         Ok(1) => game_loop(),
         Ok(2) => game_loop_ai(),
+        Ok(3) => game_loop_ai_timeout(),
 
         _ => println!("Invalid choice"),
     }
