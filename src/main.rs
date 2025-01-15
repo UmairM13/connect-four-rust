@@ -7,6 +7,10 @@ use std::time::Duration;
 // We can only index into an array with a usize
 // We also need the board to be mutable
 
+// {} is a placeholder for the value of the variable
+// board.chunks pretty much splits the board into 7 chunks, one for each row
+//.iter is to iterator or go through each element in the row
+// .collect::<String>() is to collect all the elements in the row into a string
 fn display_board(board: &[char; 42]) {
     for row in board.chunks(7) {
         println!(" {}  ", row.iter().collect::<String>());
@@ -15,10 +19,14 @@ fn display_board(board: &[char; 42]) {
     println!(" 1234567");
 }
 
+// returns type is boolean.
+// the board type is 42 characters and is mutable because we are going to change the board
 fn valid_move(board: &mut [char; 42], column: usize) -> bool {
     board[column] == '.'
 }
 
+// the .rev() is to reverse the range so that we can drop the pieces at
+// the bottom of the board
 fn drop_piece(board: &mut [char; 42], column: usize, player: char) {
     for i in (0..6).rev() {
         let index = i * 7 + column;
@@ -29,6 +37,9 @@ fn drop_piece(board: &mut [char; 42], column: usize, player: char) {
     }
 }
 
+// F is a generic type that takes a closure as an argument
+// It takes a mutable reference to the board, a character and a closure
+// the reference reperesents the column that the player wants to drop the piece
 fn take_turn<F>(board: &mut [char; 42], player: char, input_fn: F) -> bool
 where
     F: Fn(&[char; 42]) -> Option<usize>,
@@ -52,6 +63,7 @@ where
     }
 }
 
+// Essentially the same as python code.
 fn check_win(board: &[char; 42], player: char) -> bool {
     // Check for horizontal win
     for row in 0..6 {
@@ -116,6 +128,10 @@ fn is_full(board: &[char; 42]) -> bool {
     !board.contains(&'.')
 }
 
+// mut rng is a mutable variable that is a random number generator
+// loop is an infinite loop
+// column is a random number between 0 and 7
+// if the move is valid, drop the piece and return true
 fn ai_move(board: &mut [char; 42]) -> bool {
     let mut rng = rand::thread_rng();
     loop {
@@ -127,6 +143,14 @@ fn ai_move(board: &mut [char; 42]) -> bool {
     }
 }
 
+// std::io::stdin....
+// handles the user input and stores it in the input variable
+// the input is then trimmed to remove any whitespace
+// has error handling as well
+// match input.trim()...
+// tries to parse the input into a usize (unsigned integer)
+// which reperesents the column that the player wants to drop the piece
+// _ is a catch all for any other value that is not 0 or a number between 1 and 7
 fn get_player_input(_board: &[char; 42]) -> Option<usize> {
     loop {
         println!("Enter a column (1-7) or 0 to exit: ");
@@ -145,6 +169,17 @@ fn get_player_input(_board: &[char; 42]) -> Option<usize> {
     }
 }
 
+// _board is a reference to the board
+// it takes the board though it is not used
+// event::poll(timeout).unwrap()
+// checks if there is any user input within the timeout period
+// unwrap is to handle any errors
+// Event::Key is used to check if any key is pressed
+// And Yes it is a bit finicky, also that means
+// that the user doesn't have to press enter after entering the column number
+// luckily in connect four there is only 7 columns so therefore
+// the user can only enter one digit, it doesn't really work
+// with more than one digit because it enters after the first key press
 fn get_player_input_timeout(_board: &[char; 42]) -> Option<usize> {
     println!("You have 5 seconds to enter a column (1-7) or 0 to exit: ");
     let timeout = Duration::from_secs(5);
@@ -250,6 +285,7 @@ fn main() {
         .read_line(&mut choice)
         .expect("Failed to read line");
 
+    // matches the choice that the user makes and runs the corresponding game
     match choice.trim().parse::<u32>() {
         Ok(0) => println!("Game exited. Thanks for playing!"),
         Ok(1) => game_loop(get_player_input),
