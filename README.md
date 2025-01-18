@@ -28,7 +28,7 @@ You can install Rust by following the instructions [here](https://www.rust-lang.
 
 1. Clone the repository
 2. Navigate into the project directory:
-   ` cd connect_four`
+   ` cd connect-four-rust`
 3. Build the project:
    ` cargo build --release`
 4. Run the game:
